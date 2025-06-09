@@ -156,6 +156,40 @@ logs: ## Tail logs
 	@docker compose logs -f $(SVC)
 
 # ----------------------------------------------------------------------------- #
+# ML/AI Container builds
+ml-build: ## Build ML development container
+	$(call green,🤖  Building ML/AI development container)
+	@./scripts/build-ml-container.sh
+
+ml-build-slim: ## Build ML container without heavy frameworks (faster)
+	$(call green,🤖  Building slim ML container)
+	@./scripts/build-ml-container.sh --slim
+
+ml-build-prod: ## Build ML production container
+	$(call green,🤖  Building ML production container)
+	@./scripts/build-ml-container.sh --target production
+
+ml-test: ## Test ML container health
+	$(call green,🧪  Testing ML container)
+	@docker run --rm wsl-setup-tool-ml:latest-dev /home/vscode/.local/bin/health-check
+
+ml-versions: ## Show ML container versions
+	$(call green,📋  ML/AI package versions)
+	@docker run --rm wsl-setup-tool-ml:latest-dev /home/vscode/.local/bin/ml-versions
+
+ml-shell: ## Run ML container with interactive shell
+	$(call green,🐚  Starting ML container shell)
+	@docker run -it --rm -v $(PWD):/workspace wsl-setup-tool-ml:latest-dev
+
+ml-jupyter: ## Start Jupyter Lab in ML container
+	$(call green,📊  Starting Jupyter Lab (http://localhost:8888))
+	@docker run -it --rm -p 8888:8888 -v $(PWD):/workspace wsl-setup-tool-ml:latest-dev bash -c 'source /home/vscode/.venvs/ml/bin/activate && jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root'
+
+ml-clean: ## Remove ML container images
+	$(call green,🧹  Cleaning ML container images)
+	@docker images wsl-setup-tool-ml -q | xargs -r docker rmi
+
+# ----------------------------------------------------------------------------- #
 # Help (auto-generated)
 help: ## Show this help
 	@echo "Available commands:"

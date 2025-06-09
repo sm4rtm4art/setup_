@@ -1,68 +1,117 @@
+version: "3.8"
+
 services:
-  devcontainer:
+  # Main development container with all languages
+  dev:
     build:
       context: .
       dockerfile: .devcontainer/Dockerfile
-      args:
-        # Pass build args for reproducible builds
-        BAT_VERSION: 0.24.0
-        EZA_VERSION: 0.20.0
-        UV_VERSION: 0.5.11
-        RUFF_VERSION: 0.6.9
-        MYPY_VERSION: 1.11.2
-        USERNAME: vscode
-        USER_UID: ${LOCAL_UID:-1000}
-        USER_GID: ${LOCAL_GID:-1000}
-    image: wsl-setup-tool-dev:latest
-    container_name: wsl-setup-dev
-
-    # Keep container running (matches Dockerfile CMD)
-    command: ["sleep", "infinity"]
-
-    # Expose ports explicitly instead of host networking
-    ports:
-      - "8000:8000" # Add ports as needed
-
-    # Mount the entire project and use named volumes for caches
     volumes:
       - .:/workspace:cached
-      # Use named volumes instead of host paths for portability
-      - uv-cache:/home/vscode/.cache/uv
-      - pip-cache:/home/vscode/.cache/pip
-      - pre-commit-cache:/home/vscode/.cache/pre-commit
-      - mypy-cache:/home/vscode/.cache/mypy
-
-    # Environment variables
+      - ~/.ssh:/home/vscode/.ssh:ro
+      - cargo-cache:/home/vscode/.cargo/registry
+      - maven-cache:/home/vscode/.m2
     environment:
-      - SHELL=/bin/zsh
-      - DEBIAN_FRONTEND=dialog
-      # Enable SSH agent forwarding instead of mounting keys
-      - SSH_AUTH_SOCK=${SSH_AUTH_SOCK}
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/dev
+      - MARIADB_URL=mysql://root:rootpass@mariadb:3306/dev
+      - OPENSEARCH_URL=http://opensearch:9200
+      - DUCKDB_PATH=/workspace/data/warehouse.duckdb
+    ports:
+      - "8080:8080" # Spring Boot
+      - "8000:8000" # Python/FastAPI
+      - "9000:9000" # Rust services
+    depends_on:
+      - mariadb
+      - opensearch
+      - postgres
+    networks:
+      - dev-network
 
-    # Working directory (matches Dockerfile)
-    working_dir: /workspace
-
-    # Run as non-root user with dynamic UID/GID
-    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
-
-    # Enable init to properly handle signals
-    init: true
-
-    # Improved health check
+  # MariaDB for transactional data
+  mariadb:
+    image: mariadb:11.2
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: dev
+      MYSQL_USER: dev
+      MYSQL_PASSWORD: devpass
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - dev-network
     healthcheck:
-      test: ["CMD-SHELL", "ruff --version && test -d /workspace"]
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL for DuckDB metadata and general use
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: dev
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # OpenSearch for search and analytics
+  opensearch:
+    image: opensearchproject/opensearch:2.11.1
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - DISABLE_SECURITY_PLUGIN=true # For dev only!
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    networks:
+      - dev-network
+    healthcheck:
+      test:
+        ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 5s
+      retries: 5
 
-# Named volumes for cross-platform cache persistence
+  # OpenSearch Dashboards (optional but useful)
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.11.1
+    environment:
+      - OPENSEARCH_HOSTS=http://opensearch:9200
+      - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true # For dev only!
+    ports:
+      - "5601:5601"
+    depends_on:
+      - opensearch
+    networks:
+      - dev-network
+
 volumes:
-  uv-cache:
-    driver: local
-  pip-cache:
-    driver: local
-  pre-commit-cache:
-    driver: local
-  mypy-cache:
-    driver: local
+  mariadb-data:
+  postgres-data:
+  opensearch-data:
+  cargo-cache:
+  maven-cache:
+
+networks:
+  dev-network:
+    driver: bridge

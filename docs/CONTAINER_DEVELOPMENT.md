@@ -1,20 +1,20 @@
-# Development in Docker Containers 🐳
+# Container Development Guide
 
 Welcome to modern containerized development! This guide shows you how to create **isolated, reproducible development environments** that work the same on any machine.
 
-## 🎯 What is a Dev Container?
+## What is a Dev Container?
 
 A dev container is a Docker container specifically configured for development. It includes all the tools, dependencies, and configurations needed for your project, ensuring everyone on your team has the exact same development environment.
 
-## 🚀 Why Dev Containers are Game-Changers
+## Why Dev Containers are Game-Changers
 
 ### Traditional Development Problems:
 
-- 😫 "It works on my machine" syndrome
-- 🔄 Inconsistent tool versions across team
-- 💥 Dependency conflicts between projects
-- 📦 Complex setup instructions for new developers
-- 🧹 Difficult to clean up development environment
+- "It works on my machine" syndrome
+- Inconsistent tool versions across team
+- Dependency conflicts between projects
+- Complex setup instructions for new developers
+- Difficult to clean up development environment
 
 ### Dev Container Solutions:
 
@@ -25,7 +25,7 @@ A dev container is a Docker container specifically configured for development. I
 - ✅ **Version controlled** - environment lives with your code
 - ✅ **Production parity** - dev matches deployment
 
-## 🆚 Comparison: WSL vs Dev Containers vs Traditional
+## Comparison: WSL vs Dev Containers vs Traditional
 
 | Feature         | Traditional Setup     | WSL Setup             | Dev Container       |
 | --------------- | --------------------- | --------------------- | ------------------- |
@@ -38,9 +38,9 @@ A dev container is a Docker container specifically configured for development. I
 | Resource Usage  | ✅ Native performance | ✅ Native performance | ⚠️ Some overhead    |
 | Setup Time      | 😫 30-60 minutes      | ⚠️ 10-20 minutes      | ✅ 2-5 minutes      |
 
-## 🛠️ Supported Development Stacks
+## Supported Development Stacks
 
-### 🐍 Python Development (Modern Toolchain)
+### Python Development (Modern Toolchain)
 
 - **uv** - Ultra-fast package manager (10-100x faster than pip)
 - **ruff** - Lightning-fast linter & formatter (replaces black, flake8, isort)
@@ -48,7 +48,7 @@ A dev container is a Docker container specifically configured for development. I
 - **Python 3.12** with all modern features
 - **Pre-commit hooks** for code quality
 
-### ☕ Java Development (Full Enterprise Stack)
+### Java Development (Full Enterprise Stack)
 
 - **Java 21, 17, 11** - Multiple versions via SDKMAN
 - **Gradle & Maven** - Modern build tools
@@ -56,7 +56,7 @@ A dev container is a Docker container specifically configured for development. I
 - **GraalVM support** - Native compilation
 - **JBang** - Java scripting
 
-### 🟨 Node.js Development (Modern JavaScript)
+### Node.js Development (Modern JavaScript)
 
 - **Node.js LTS** - Latest stable version
 - **pnpm, yarn, npm** - Multiple package managers
@@ -64,7 +64,7 @@ A dev container is a Docker container specifically configured for development. I
 - **Vite, Next.js** - Modern frameworks
 - **ESLint, Prettier** - Code quality tools
 
-## 🏃‍♂️ Quick Start (5 Minutes)
+## Quick Start (5 Minutes)
 
 ### Prerequisites
 
@@ -83,11 +83,11 @@ code .
 # 2. Open in container
 # Press F1 → "Dev Containers: Reopen in Container"
 
-# 3. Start coding! 🎉
+# 3. Start coding!
 # All tools are pre-installed and ready
 ```
 
-## 🚀 All Deployment Options
+## All Deployment Options
 
 ### Method 1: VS Code (Recommended)
 
@@ -136,18 +136,18 @@ uses: devcontainers/ci@v0.3
 
 **✅ Best for:** Automated testing, deployment pipelines
 
-**📖 [Complete Deployment Guide →](guides/GETTING_STARTED.md#🚀-deployment-methods-how-to-use-your-dev-container)**
+**[Complete Deployment Guide →](GETTING_STARTED.md#deployment-methods-how-to-use-your-dev-container)**
 
-## 🎯 Choose Your Stack
+## Choose Your Stack
 
-### 🐍 Python Development (Default)
+### Python Development (Default)
 
 ```bash
 # Already configured! Just open in container
 # Includes: uv, ruff, mypy, Python 3.12
 ```
 
-### ☕ Java Development
+### Java Development
 
 ```bash
 # Switch to Java configuration
@@ -156,7 +156,7 @@ cp .devcontainer/examples/java-project.json .devcontainer/devcontainer.json
 # Rebuild container: F1 → "Dev Containers: Rebuild Container"
 ```
 
-### 🟨 Node.js Development
+### Node.js Development
 
 ```bash
 # Switch to Node.js configuration
@@ -165,7 +165,7 @@ cp .devcontainer/examples/node-project.json .devcontainer/devcontainer.json
 # Rebuild container: F1 → "Dev Containers: Rebuild Container"
 ```
 
-## 💡 How This Compares to Your WSL Setup
+## How This Compares to Your WSL Setup
 
 **Your WSL setup script is still valuable!** Here's how they work together:
 
@@ -195,7 +195,7 @@ cd ~/projects/my-java-app
 code .  # Opens in Java container
 ```
 
-## 🔧 How to Use This Dev Container
+## How to Use This Dev Container
 
 ### Option 1: VS Code Dev Containers (Recommended)
 
@@ -247,20 +247,20 @@ docker run -it --rm \
 
 This dev container includes:
 
-### 🖥️ Base Environment
+### Base Environment
 
 - **OS**: Debian 12 (same as your WSL setup)
 - **Shell**: Zsh with Oh My Zsh
 - **User**: Non-root vscode user for security
 
-### 🔧 Development Tools
+### Development Tools
 
 - **Version Control**: Git with pre-commit hooks
 - **Container Runtime**: Docker-in-Docker support
 - **Modern CLI**: eza (ls), bat (cat), ripgrep (grep), fd (find), fzf
 - **Shell Tools**: shellcheck, bats for bash development
 
-### 🐍 Python Stack (Default)
+### Python Stack (Default)
 
 - **Runtime**: Python 3.12 (latest stable)
 - **Package Manager**: uv (10-100x faster than pip)
@@ -268,23 +268,23 @@ This dev container includes:
 - **Type Checker**: mypy with strict configuration
 - **Configuration**: All in pyproject.toml (modern approach)
 
-### ☕ Java Stack (Optional)
+### Java Stack (Optional)
 
 - **Runtimes**: Java 21, 17, 11 via SDKMAN
 - **Build Tools**: Gradle 8.5, Maven 3.9.6
 - **Frameworks**: Spring Boot CLI, JBang
 - **IDE Support**: Full VS Code Java extension pack
 
-### 🟨 Node.js Stack (Optional)
+### Node.js Stack (Optional)
 
 - **Runtime**: Node.js LTS
 - **Package Managers**: npm, pnpm, yarn
 - **Type Safety**: TypeScript
 - **Frameworks**: Vite, Next.js, Nuxt
 
-## ⚡ Quick Commands (Inside Container)
+## Quick Commands (Inside Container)
 
-### 🐍 Python Development
+### Python Development
 
 ```bash
 # Package management (uv is ultra-fast!)
@@ -306,7 +306,7 @@ py                     # python3
 pip                    # uv pip (for muscle memory)
 ```
 
-### ☕ Java Development
+### Java Development
 
 ```bash
 # Switch Java versions instantly
@@ -328,7 +328,7 @@ gci                   # gradle clean build
 mci                   # mvn clean install
 ```
 
-### 🟨 Node.js Development
+### Node.js Development
 
 ```bash
 # Package management
@@ -342,7 +342,7 @@ pnpm build           # Build for production
 yarn test            # Run tests
 ```
 
-### 🔧 Container Management
+### Container Management
 
 ```bash
 # Test everything works
@@ -355,7 +355,7 @@ yarn test            # Run tests
 docker logs wsl-setup-dev
 ```
 
-## 🛠️ Customization
+## Customization
 
 ### Adding New Tools
 
@@ -439,49 +439,49 @@ docker exec -it wsl-setup-dev sudo chown -R vscode:vscode /workspace
 - Allocate more resources in Docker Desktop settings
 - Use WSL2 backend on Windows
 
-## 📚 Documentation & Guides
+## Documentation & Guides
 
-### 📖 Getting Started
+### Getting Started
 
-- **[Getting Started Guide](guides/GETTING_STARTED.md)** - Complete setup walkthrough
-- **[FAQ](guides/FAQ.md)** - Common questions and solutions
-- **[Advanced Configuration](guides/ADVANCED.md)** - Power user features
+- **[Getting Started Guide](GETTING_STARTED.md)** - Complete setup walkthrough
+- **[FAQ](FAQ.md)** - Common questions and solutions
+- **[Advanced Configuration](ADVANCED.md)** - Power user features
 
-### 🎯 Quick References
+### Quick References
 
-- **[Python Example](examples/sample_python_code.py)** - Modern Python with type hints
-- **[Java Configuration](examples/java-project.json)** - Enterprise Java setup
-- **[Node.js Configuration](examples/node-project.json)** - Modern JavaScript stack
+- **[Python Example](../examples/sample_python_code.py)** - Modern Python with type hints
+- **[Java Configuration](../examples/java-project.json)** - Enterprise Java setup
+- **[Node.js Configuration](../examples/node-project.json)** - Modern JavaScript stack
 
-### 🔧 Configuration Templates
+### Configuration Templates
 
-- **[pyproject.toml](config/pyproject.toml)** - Python tools configuration
-- **[pre-commit](config/.pre-commit-config.yaml)** - Code quality automation
+- **[pyproject.toml](../config/pyproject.toml)** - Python tools configuration
+- **[pre-commit](../config/.pre-commit-config.yaml)** - Code quality automation
 
-## 🚀 Next Steps
+## Next Steps
 
 ### For First-Time Users:
 
-1. **[Install Prerequisites](guides/GETTING_STARTED.md#what-you-need)** - Docker Desktop + VS Code
+1. **[Install Prerequisites](GETTING_STARTED.md#what-you-need)** - Docker Desktop + VS Code
 2. **[Try the Quick Start](#🏃‍♂️-quick-start-5-minutes)** - Get coding in 5 minutes
-3. **[Read the FAQ](guides/FAQ.md)** - Understand the concepts
-4. **[Explore Examples](examples/)** - See different language setups
+3. **[Read the FAQ](FAQ.md)** - Understand the concepts
+4. **[Explore Examples](../examples/)** - See different language setups
 
 ### For Teams:
 
 1. **Customize** the `.devcontainer/` configuration for your project
 2. **Commit** the configuration to your repository
-3. **Share** the [Getting Started Guide](guides/GETTING_STARTED.md) with your team
-4. **Set up CI/CD** using the same containers (see [Advanced Guide](guides/ADVANCED.md))
+3. **Share** the [Getting Started Guide](GETTING_STARTED.md) with your team
+4. **Set up CI/CD** using the same containers (see [Advanced Guide](ADVANCED.md))
 
 ### For Advanced Users:
 
-1. **[Multi-container setups](guides/ADVANCED.md#multi-container-development)** - Microservices
-2. **[Custom features](guides/ADVANCED.md#custom-features)** - Build your own tools
-3. **[Performance optimization](guides/ADVANCED.md#performance-optimization)** - Speed tips
-4. **[CI/CD integration](guides/ADVANCED.md#cicd-integration)** - Use in pipelines
+1. **[Multi-container setups](ADVANCED.md#multi-container-development)** - Microservices
+2. **[Custom features](ADVANCED.md#custom-features)** - Build your own tools
+3. **[Performance optimization](ADVANCED.md#performance-optimization)** - Speed tips
+4. **[CI/CD integration](ADVANCED.md#cicd-integration)** - Use in pipelines
 
-## 🤝 Relationship to WSL Setup
+## Relationship to WSL Setup
 
 **Your WSL setup script (`setup_wsl.sh`) is still valuable!** Here's how they complement each other:
 
@@ -512,15 +512,15 @@ cd ~/projects/java-service && code .   # Java container
 cd ~/projects/react-app && code .      # Node.js container
 ```
 
-## 💬 Community & Support
+## Community & Support
 
-- **Questions?** Check the [FAQ](guides/FAQ.md) or file an issue
+- **Questions?** Check the [FAQ](FAQ.md) or file an issue
 - **Found a bug?** Please report it with details
 - **Want a feature?** Open a feature request
 - **Success story?** Share it with the team!
 
 ---
 
-**Happy Coding! 🎉**
+**Happy Coding!**
 
 _Remember: The best development environment is the one your whole team can use effortlessly._

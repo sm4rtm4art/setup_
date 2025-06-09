@@ -1,0 +1,438 @@
+# syntax=docker/dockerfile:1.7
+# =============================================================================
+# Python ML/AI Development Container (Multi-stage, Production-ready)
+# =============================================================================
+
+# Build arguments for flexibility
+ARG BASE_TAG=latest
+ARG PYTHON_VERSION_OVERRIDE
+ARG DUCKDB_VERSION_OVERRIDE
+ARG INCLUDE_TENSORFLOW=1
+ARG INCLUDE_PYTORCH=1
+
+# Load centralized version configuration once
+COPY config/versions.conf /tmp/versions.conf
+
+# =============================================================================
+# Stage 1: Base with system dependencies
+# =============================================================================
+FROM wsl-setup-tool-dev:${BASE_TAG} AS system-base
+
+# TODO: Pin with digest for production: @sha256:<digest>
+# Get digest with: docker inspect wsl-setup-tool-dev:latest --format='{{index .RepoDigests 0}}'
+
+USER root
+
+# Install all system dependencies in one layer with cleanup
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt/lists \
+    . /tmp/versions.conf && \
+    echo "Building ML container with Python ${PYTHON_VERSION}, DuckDB ${DUCKDB_VERSION}" && \
+    apt-get update && apt-get install -y --no-install-recommends \
+    # OCR dependencies
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    tesseract-ocr-deu \
+    libtesseract-dev \
+    poppler-utils \
+    # Image processing
+    libopencv-dev \
+    python3-opencv \
+    # Database clients
+    mariadb-client \
+    postgresql-client \
+    # ML/AI runtime dependencies
+    libhdf5-dev \
+    libopenblas-dev \
+    libblas-dev \
+    liblapack-dev \
+    # Performance monitoring
+    htop \
+    iotop \
+    sysstat \
+    # Python development
+    python3-dev \
+    python3-distutils \
+    # Build dependencies (will be removed later)
+    build-essential \
+    gfortran \
+    && apt-get purge -y --auto-remove \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Install DuckDB CLI with version management and architecture detection
+RUN . /tmp/versions.conf && \
+    DUCKDB_VERSION=${DUCKDB_VERSION_OVERRIDE:-$DUCKDB_VERSION} && \
+    ARCH_SUFFIX="amd64" && \
+    DUCKDB_CLI_SHA256=${DUCKDB_CLI_SHA256_amd64} && \
+    if [ "$(uname -m)" = "aarch64" ]; then \
+        ARCH_SUFFIX="arm64"; \
+        DUCKDB_CLI_SHA256=${DUCKDB_CLI_SHA256_arm64}; \
+    fi && \
+    curl -fsSL -o /tmp/duckdb_cli.zip \
+    "https://github.com/duckdb/duckdb/releases/download/${DUCKDB_VERSION}/duckdb_cli-linux-${ARCH_SUFFIX}.zip" \
+    && echo "${DUCKDB_CLI_SHA256}  /tmp/duckdb_cli.zip" | sha256sum -c - \
+    && unzip -q /tmp/duckdb_cli.zip -d /usr/local/bin/ \
+    && chmod +x /usr/local/bin/duckdb \
+    && rm /tmp/duckdb_cli.zip
+
+# =============================================================================
+# Stage 2: Python dependencies builder
+# =============================================================================
+FROM system-base AS python-builder
+
+USER vscode
+
+# Create virtual environment using uv
+RUN uv venv /home/vscode/.venvs/ml
+
+# Copy project files if they exist
+COPY --chown=vscode:vscode pyproject.toml* uv.lock* ./
+
+# Install Python dependencies focused on data processing and APIs
+RUN . /tmp/versions.conf && \
+    PYTHON_VERSION=${PYTHON_VERSION_OVERRIDE:-$PYTHON_VERSION} && \
+    /home/vscode/.venvs/ml/bin/uv pip install \
+    # Core data processing
+    "polars>=0.20.0" \
+    "duckdb>=0.9.2" \
+    "pyarrow>=14.0.0" \
+    "pandas>=2.0.0" \
+    # API Development
+    "fastapi>=0.104.0" \
+    "uvicorn[standard]>=0.24.0" \
+    "pydantic>=2.5.0" \
+    "httpx>=0.26.0" \
+    # Database & ORM
+    "sqlalchemy>=2.0.0" \
+    "alembic>=1.13.0" \
+    "psycopg2-binary>=2.9.0" \
+    "pymysql>=1.1.0" \
+    "asyncpg>=0.29.0" \
+    # Workflow orchestration
+    "apache-airflow>=2.8.0" \
+    "apache-airflow-providers-postgres>=5.0.0" \
+    "apache-airflow-providers-docker>=3.0.0" \
+    # Monitoring & Observability
+    "prometheus-client>=0.19.0" \
+    "grafana-api>=1.0.3" \
+    "opentelemetry-api>=1.21.0" \
+    "opentelemetry-sdk>=1.21.0" \
+    "opentelemetry-instrumentation-fastapi>=0.42b0" \
+    # Development tools
+    "pytest>=7.4.0" \
+    "pytest-cov>=4.1.0" \
+    "pytest-asyncio>=0.23.0" \
+    "ruff>=0.1.0" \
+    "mypy>=1.7.0" \
+    "pre-commit>=3.6.0" \
+    # Optional ML frameworks (only if enabled)
+    $([ "${INCLUDE_PYTORCH}" = "1" ] && echo "torch>=2.1.0 --index-url https://download.pytorch.org/whl/cpu") \
+    $([ "${INCLUDE_TENSORFLOW}" = "1" ] && echo "tensorflow>=2.15.0")
+
+# Generate lock file for reproducibility
+RUN /home/vscode/.venvs/ml/bin/uv pip freeze > /home/vscode/.venvs/ml/requirements.lock
+
+# =============================================================================
+# Stage 3: Final development image
+# =============================================================================
+FROM system-base AS development
+
+USER root
+
+# Remove build dependencies to reduce final image size
+RUN apt-get purge -y --auto-remove \
+    build-essential \
+    gfortran \
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+USER vscode
+
+# Copy the complete virtual environment from builder stage
+COPY --from=python-builder --chown=vscode:vscode /home/vscode/.venvs/ml /home/vscode/.venvs/ml
+
+# Copy project templates
+COPY --chown=vscode:vscode templates/ml-project/ /home/vscode/templates/ml-project/
+
+# Create shell configuration with improved aliases
+RUN echo '# Data Processing & API Environment Configuration' >> /home/vscode/.bashrc && \
+    echo 'export DATA_VENV="/home/vscode/.venvs/ml"' >> /home/vscode/.bashrc && \
+    echo 'alias data="source $DATA_VENV/bin/activate"' >> /home/vscode/.bashrc && \
+    echo 'alias ml="source $DATA_VENV/bin/activate"' >> /home/vscode/.bashrc && \
+    echo 'alias fastapi="data && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"' >> /home/vscode/.bashrc && \
+    echo 'alias airflow-web="data && airflow webserver --port 8080"' >> /home/vscode/.bashrc && \
+    echo 'alias airflow-scheduler="data && airflow scheduler"' >> /home/vscode/.bashrc && \
+    echo '' >> /home/vscode/.bashrc && \
+    echo '# Database connections' >> /home/vscode/.bashrc && \
+    echo 'alias mariadb-dev="mariadb -h mariadb -u dev -pdevpass dev"' >> /home/vscode/.bashrc && \
+    echo 'alias psql-dev="psql -h postgres -U postgres -d dev"' >> /home/vscode/.bashrc && \
+    echo 'alias duckdb-dev="duckdb /workspace/data/warehouse.duckdb"' >> /home/vscode/.bashrc && \
+    echo '' >> /home/vscode/.bashrc && \
+    echo '# Monitoring & Metrics' >> /home/vscode/.bashrc && \
+    echo 'alias prometheus-health="curl -sS http://localhost:9090/-/healthy"' >> /home/vscode/.bashrc && \
+    echo 'alias grafana-health="curl -sS http://localhost:3000/api/health"' >> /home/vscode/.bashrc && \
+    echo '' >> /home/vscode/.bashrc && \
+    echo '# Development tools' >> /home/vscode/.bashrc && \
+    echo 'alias test="data && pytest"' >> /home/vscode/.bashrc && \
+    echo 'alias lint="data && ruff check . && mypy ."' >> /home/vscode/.bashrc && \
+    echo 'alias format="data && ruff format ."' >> /home/vscode/.bashrc && \
+    echo '' >> /home/vscode/.bashrc && \
+    echo '# Docker shortcuts' >> /home/vscode/.bashrc && \
+    echo 'alias dc="docker-compose"' >> /home/vscode/.bashrc && \
+    echo 'alias dcu="docker-compose up -d"' >> /home/vscode/.bashrc && \
+    echo 'alias dcd="docker-compose down"' >> /home/vscode/.bashrc && \
+    echo 'alias dcl="docker-compose logs -f"' >> /home/vscode/.bashrc && \
+    echo '' >> /home/vscode/.bashrc && \
+    echo '# Auto-activate data environment in new shells' >> /home/vscode/.bashrc && \
+    echo 'if [[ "$SHLVL" -eq 1 && -z "$VIRTUAL_ENV" && -d "$DATA_VENV" ]]; then' >> /home/vscode/.bashrc && \
+    echo '    source $DATA_VENV/bin/activate' >> /home/vscode/.bashrc && \
+    echo 'fi' >> /home/vscode/.bashrc
+
+# Copy configuration to zsh
+RUN cp /home/vscode/.bashrc /home/vscode/.zshrc
+
+# Create enhanced ML project template with proper Python version
+RUN . /tmp/versions.conf && \
+    PYTHON_VERSION=${PYTHON_VERSION_OVERRIDE:-$PYTHON_VERSION} && \
+    mkdir -p /home/vscode/templates/ml-project && \
+    cat > /home/vscode/templates/ml-project/pyproject.toml << EOF
+[project]
+name = "ml-ai-project"
+version = "0.1.0"
+description = "ML/AI Data Processing Project"
+requires-python = ">=${PYTHON_VERSION%.*}"
+dependencies = [
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "scikit-learn>=1.3.0",
+    "duckdb>=0.9.2",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+]
+
+[project.optional-dependencies]
+ml = [
+    "torch>=2.1.0",
+    "transformers>=4.36.0",
+    "sentence-transformers>=2.2.0",
+]
+ocr = [
+    "pytesseract>=0.3.10",
+    "opencv-python>=4.8.0",
+    "easyocr>=1.7.0",
+]
+rag = [
+    "langchain>=0.1.0",
+    "chromadb>=0.4.0",
+    "openai>=1.0.0",
+]
+data = [
+    "polars>=0.20.0",
+    "pyarrow>=14.0.0",
+    "delta-spark>=3.0.0",
+]
+
+[tool.ruff]
+target-version = "py$(echo ${PYTHON_VERSION} | sed 's/\.//')"
+line-length = 100
+select = ["E", "F", "I", "N", "UP", "S", "B", "A", "C4", "PT", "SIM", "PL"]
+ignore = ["S101", "PLR0913", "PLR2004"]
+
+[tool.mypy]
+python_version = "${PYTHON_VERSION%.*}"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "--cov=src --cov-report=html --cov-report=term-missing --cov-fail-under=80"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "jupyter>=1.0.0",
+    "mlflow>=2.8.0",
+    "ruff>=0.1.0",
+    "mypy>=1.7.0",
+]
+EOF
+
+# Create enhanced data processing starter script with better error handling
+RUN cat > /home/vscode/templates/ml-project/start_data_env.py << 'EOF'
+#!/usr/bin/env python3
+"""
+Data Processing & API Development Environment Starter Script
+Enhanced verification with better error reporting
+"""
+
+import sys
+from typing import Dict, List
+
+def test_imports(packages: Dict[str, List[str]]) -> bool:
+    """Test package imports with categorized reporting"""
+    success = True
+    
+    for category, pkg_list in packages.items():
+        print(f"\n🧪 Testing {category}...")
+        for pkg in pkg_list:
+            try:
+                __import__(pkg)
+                print(f"  ✅ {pkg}")
+            except ImportError as e:
+                print(f"  ❌ {pkg}: {e}")
+                success = False
+    
+    return success
+
+def test_data_stack() -> None:
+    """Test that core data processing libraries are working"""
+    packages = {
+        "Core Data Processing": ["polars", "pandas", "duckdb", "pyarrow"],
+        "Database & Async": ["sqlalchemy", "psycopg2", "asyncpg", "pymysql"],
+        "API & Web": ["fastapi", "uvicorn", "pydantic", "httpx"],
+        "Workflow & Orchestration": ["airflow"],  # May not always be importable
+        "Monitoring": ["prometheus_client"],
+        "Development": ["pytest", "ruff", "mypy"],
+    }
+    
+    print("🚀 Data Processing & API Environment Health Check")
+    print("=" * 55)
+    
+    if test_imports(packages):
+        print("\n✅ All systems ready!")
+        print("\n🎯 Quick Start Commands:")
+        print("  fastapi               # Start FastAPI dev server")
+        print("  airflow-web           # Start Airflow webserver")
+        print("  test                  # Run pytest tests")
+        print("  lint                  # Run ruff + mypy")
+        print("  ml-versions           # Show all versions")
+    else:
+        print("\n⚠️  Some dependencies missing. Check logs above.")
+        print("💡 Note: Airflow import failures are normal in some environments")
+
+if __name__ == "__main__":
+    test_data_stack()
+EOF
+
+# Create enhanced version info script
+RUN cat > /home/vscode/.local/bin/ml-versions << 'EOF'
+#!/bin/bash
+set -euo pipefail
+
+. /tmp/versions.conf
+source /home/vscode/.venvs/ml/bin/activate
+
+echo "=== Data Processing & API Environment Versions ==="
+echo "System Info:"
+echo "  OS: $(cat /etc/os-release | grep PRETTY_NAME | cut -d'"' -f2)"
+echo "  Architecture: $(uname -m)"
+echo "  Python: $(python --version)"
+echo "  UV: $(uv --version)"
+echo ""
+echo "Core Libraries:"
+python -c "
+import sys
+packages = ['polars', 'pandas', 'duckdb', 'fastapi', 'sqlalchemy', 'airflow', 'prometheus_client']
+for pkg in packages:
+    try:
+        mod = __import__(pkg)
+        version = getattr(mod, '__version__', 'unknown')
+        print(f'  {pkg}: {version}')
+    except ImportError:
+        print(f'  {pkg}: not installed')
+"
+echo ""
+echo "Database Tools:"
+echo "  DuckDB CLI: $(duckdb --version)"
+echo "  MariaDB: $(mariadb --version | head -1)"
+echo "  PostgreSQL: $(psql --version)"
+echo ""
+echo "Rust Tools:"
+echo "  Rust: $(rustc --version 2>/dev/null || echo 'not installed')"
+echo "  Cargo: $(cargo --version 2>/dev/null || echo 'not installed')"
+EOF
+
+chmod +x /home/vscode/.local/bin/ml-versions
+
+# Create environment health check script (lightweight for Docker health check)
+RUN cat > /home/vscode/.local/bin/health-check << 'EOF'
+#!/bin/bash
+# Lightweight health check for Docker
+/home/vscode/.venvs/ml/bin/python -c "
+import sys
+try:
+    import polars, duckdb, fastapi
+    print('OK')
+    sys.exit(0)
+except ImportError as e:
+    print(f'FAIL: {e}', file=sys.stderr)
+    sys.exit(1)
+"
+EOF
+
+chmod +x /home/vscode/.local/bin/health-check
+
+# Set working directory
+WORKDIR /workspace
+
+# Expose commonly used ports
+EXPOSE 8888 8501 8000 5000
+
+# Improved health check using the lightweight script
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD /home/vscode/.local/bin/health-check
+
+# =============================================================================
+# Stage 4: Production variant (optional target)
+# =============================================================================
+FROM python-builder AS production
+
+USER root
+
+# Install only runtime dependencies for production
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt/lists \
+    apt-get update && apt-get install -y --no-install-recommends \
+    # Minimal runtime deps
+    libopencv-dev \
+    tesseract-ocr \
+    libtesseract-dev \
+    libhdf5-dev \
+    libopenblas-dev \
+    # Remove everything else
+    && apt-get purge -y --auto-remove \
+    build-essential \
+    gfortran \
+    htop \
+    iotop \
+    sysstat \
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root production user
+RUN groupadd -r app && useradd -r -g app -u 10001 app
+USER app
+
+# Copy only the virtual environment
+COPY --from=python-builder --chown=app:app /home/vscode/.venvs/ml /app/venv
+
+# Set production environment
+ENV VIRTUAL_ENV=/app/venv
+ENV PATH="/app/venv/bin:$PATH"
+ENV PYTHONPATH=/app
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Production health check
+HEALTHCHECK --interval=60s --timeout=30s --start-period=30s --retries=3 \
+    CMD python -c "import pandas, numpy" || exit 1 

@@ -2,6 +2,18 @@
 # WSL Setup Tool - GitIgnore Configuration
 # =============================================================================
 
+# Security and sensitive files
+*.ssh
+*.ssh.*
+id_rsa*
+id_ed25519*
+*.pem
+*.key
+*.p12
+*.pfx
+.secrets/
+secrets.*
+
 # Environment files
 .env
 .env.*

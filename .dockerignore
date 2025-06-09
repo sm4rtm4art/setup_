@@ -46,6 +46,29 @@ venv/
 .mypy_cache/
 .ruff_cache/
 
+# ML/AI specific artifacts
+*.pkl
+*.joblib
+*.h5
+*.model
+*.weights
+models/
+checkpoints/
+mlruns/
+wandb/
+.mlflow/
+data/
+datasets/
+*.parquet
+*.arrow
+*.feather
+*.pickle
+
+# Jupyter notebooks (exclude from production builds)
+*.ipynb
+.jupyter/
+.ipython/
+
 # Documentation
 docs/_build/
 *.md
@@ -73,4 +96,31 @@ logs/
 # Temporary files
 tmp/
 temp/
-*.tmp 
+*.tmp
+
+# Large binaries and media files
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
+
+# Docker related (avoid recursive copies)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Development only scripts
+scripts/dev/
+scripts/local/
+*.dev.sh
+*.local.sh 

@@ -7,7 +7,7 @@
 [![Docker Support](https://img.shields.io/badge/Docker-Ready-blue)](/docker-compose.yml)
 [![Multi-Language](https://img.shields.io/badge/Languages-Python%20%7C%20Java%20%7C%20Rust-green)](#language-support)
 
-## 🚀 **Quick Start**
+## Quick Start
 
 ### Option 1: Native Installation (Linux/WSL)
 
@@ -31,36 +31,36 @@ docker compose up -d
 docker compose exec devcontainer bash
 ```
 
-## 🏗️ **Architecture Overview**
+## Architecture Overview
 
 This project uses a **clean, modular architecture** that replaced a 1400+ line monolithic script:
 
 ```
 multi-lang-dev-env/
-├── 🐳 .devcontainer/         # Multi-language development container (PRIMARY)
-├── 🛠️ Makefile              # Development workflow automation (PRIMARY)
-├── 📚 lib/                   # Core libraries
+├── .devcontainer/         # Multi-language development container (PRIMARY)
+├── Makefile              # Development workflow automation (PRIMARY)
+├── lib/                   # Core libraries
 │   ├── core.sh              # Logging, error handling, utilities
 │   ├── installer.sh         # Installation patterns
 │   └── wsl.sh               # Platform-specific functionality
-├── 🔧 config/                # Configuration management
+├── config/                # Configuration management
 │   └── versions.conf        # Centralized version control
-├── 📦 modules/               # Feature modules
+├── modules/               # Feature modules
 │   └── languages/           # Language-specific installers
-├── 🚀 setup-refactored.sh    # Native installer (Linux/WSL only)
-└── 📖 docs/                  # Comprehensive documentation
+├── setup-refactored.sh    # Native installer (Linux/WSL only)
+└── docs/                  # Comprehensive documentation
 ```
 
-## 🎯 **Usage Approaches**
+## Usage Approaches
 
-### 🐳 **Container-First (Recommended)**
+### Container-First (Recommended)
 
 - ✅ **Works everywhere**: Linux, macOS, Windows
 - ✅ **Consistent environment**: Same setup for all team members
 - ✅ **No system pollution**: Isolated from host system
 - ✅ **Ready to use**: `make dev` and you're coding
 
-### 🖥️ **Native Installation**
+### Native Installation
 
 - ✅ **Performance**: Direct access to system resources
 - ✅ **Integration**: Better with host system tools
@@ -81,22 +81,22 @@ multi-lang-dev-env/
 - You want isolated environments
 - You're on macOS or Windows
 
-## 💻 **Language Support**
+## Language Support
 
-### ✅ **Fully Supported**
+### Fully Supported
 
-- **🐍 Python** - `uv`, `ruff`, `mypy`, `pytest`
-- **☕ Java** - OpenJDK 21, Maven, Gradle, Spring Boot
-- **🦀 Rust** - `rustup`, `cargo`, `clippy`, `rustfmt`
+- **Python** - `uv`, `ruff`, `mypy`, `pytest`
+- **Java** - OpenJDK 21, Maven, Gradle, Spring Boot
+- **Rust** - `rustup`, `cargo`, `clippy`, `rustfmt`
 
-### 🛠️ **Development Tools**
+### Development Tools
 
 - **Shell**: Zsh + Oh My Zsh with smart presets
 - **CLI Tools**: `bat`, `eza`, `ripgrep`, `fd`, `fzf`, `tmux`
 - **Containers**: Docker + Docker Compose
 - **Quality**: Pre-commit hooks, CI/CD pipeline
 
-## 📖 **Usage Examples**
+## Usage Examples
 
 ### Modular Installation
 
@@ -126,7 +126,7 @@ make rust-build    # Rust compilation
 make java-package  # Maven packaging
 ```
 
-## 🔧 **Configuration**
+## Configuration
 
 ### Version Management
 
@@ -151,7 +151,7 @@ LOCAL_UID=1000 make dev-up
 VCS_REF=main BUILD_DATE=$(date -u +%Y-%m-%d) make dev-rebuild
 ```
 
-## 🧪 **Quality Assurance**
+## Quality Assurance
 
 ### Pre-commit Hooks
 
@@ -171,15 +171,24 @@ pre-commit run --all-files
 - **Building**: Container and release builds
 - **Documentation**: Automated docs deployment
 
-## 📚 **Documentation**
+## Documentation
 
-| Document                                                               | Purpose                                 |
-| ---------------------------------------------------------------------- | --------------------------------------- |
-| [`docs/REFACTORING_MASTER_GUIDE.md`](docs/REFACTORING_MASTER_GUIDE.md) | Architecture and implementation details |
-| [`docs/CI_CD_GUIDE.md`](docs/CI_CD_GUIDE.md)                           | Automation and quality processes        |
-| [`docs/DOCKER_GUIDE.md`](docs/DOCKER_GUIDE.md)                         | Container development workflow          |
+All documentation has been consolidated in the [`/docs`](docs/) directory for easy access:
 
-## 🆘 **Troubleshooting**
+| Document                                                         | Purpose                                       | Best For             |
+| ---------------------------------------------------------------- | --------------------------------------------- | -------------------- |
+| [**Documentation Hub**](docs/README.md)                          | **START HERE** - Complete documentation index | All users            |
+| [**Getting Started**](docs/GETTING_STARTED.md)                   | 5-minute setup guide                          | New users            |
+| [**Docker Guide**](docs/DOCKER_GUIDE.md)                         | Container development workflow                | Container users      |
+| [**Container Development Guide**](docs/CONTAINER_DEVELOPMENT.md) | Complete container development guide          | VS Code/Cursor users |
+| [**Advanced Configuration**](docs/ADVANCED.md)                   | Power user features                           | Expert users         |
+| [**FAQ**](docs/FAQ.md)                                           | Common questions and solutions                | Troubleshooting      |
+| [**Architecture Guide**](docs/REFACTORING_MASTER_GUIDE.md)       | Implementation details                        | Contributors         |
+| [**CI/CD Guide**](docs/CI_CD_GUIDE.md)                           | Automation processes                          | DevOps teams         |
+
+**Quick Start:** Begin with the [Documentation Hub](docs/README.md) for guided navigation based on your needs.
+
+## Troubleshooting
 
 ### Common Issues
 
@@ -206,7 +215,7 @@ echo "LOCAL_UID=$(id -u)" > .env
 echo "LOCAL_GID=$(id -g)" >> .env
 ```
 
-## 🤝 **Contributing**
+## Contributing
 
 1. **Fork the repository**
 2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
@@ -214,11 +223,11 @@ echo "LOCAL_GID=$(id -g)" >> .env
 4. **Commit changes**: `git commit -m "feat: add amazing feature"`
 5. **Push and create MR**: `git push origin feature/amazing-feature`
 
-## 📄 **License**
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 **Acknowledgments**
+## Acknowledgments
 
 - **Modern CLI Tools**: Built on excellent tools like `uv`, `ruff`, `eza`
 - **Container Best Practices**: Security-focused multi-stage builds

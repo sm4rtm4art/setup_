@@ -8,101 +8,99 @@
 # -----------------------------------------------------------------------------
 FROM debian:12-slim AS builder
 
-# Pin specific versions for reproducible builds
-ARG BAT_VERSION=0.24.0
-ARG EZA_VERSION=0.20.0
-ARG UV_VERSION=0.5.11
-ARG RUFF_VERSION=0.6.9
-ARG MYPY_VERSION=1.11.2
+# Copy version configuration and set TARGETPLATFORM
+COPY config/versions.conf /tmp/versions.conf
+ARG TARGETPLATFORM
 
-# Java versions
-ARG JAVA_VERSION=21
-ARG MAVEN_VERSION=3.9.6
-ARG GRADLE_VERSION=8.6
-
-# Rust versions
-ARG RUST_VERSION=1.75.0
-
-# Security: Add checksums for supply chain verification
-ARG BAT_SHA256=907554a9eff239f256ee8fe05a922aad84febe4fe10a499def72a4557211d00da
-ARG EZA_SHA256=ee1319db52de02075b0e71a0a9e48ae83ad2d1b7c11b1c8ab38b8af15651c7a8
-ARG MAVEN_SHA256=6eedd2cae3626d6ad3a5c9ee324bd265853d64297f07f033430755bd0e0c3a4b
-ARG GRADLE_SHA256=9ed7abccc1a58b1bb5b0a2b9b481e6fb6e42c0dd83bf5b32f3e5de68c7da49c9
+# ARG overrides for versions
+ARG EZA_VERSION_OVERRIDE
+ARG UV_VERSION_OVERRIDE
+ARG MAVEN_VERSION_OVERRIDE
+ARG GRADLE_VERSION_OVERRIDE
 
 # Avoid warnings during build
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install build dependencies with cache mount for faster rebuilds
 RUN --mount=type=cache,target=/var/cache/apt \
-    --mount=type=cache,target=/var/lib/apt/lists \
     apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
-    gnupg
+    gnupg \
+    unzip
 
 # Create download directory
 WORKDIR /downloads
 
-# Download CLI tools with version pinning and checksum verification
-RUN curl -fsSL -o bat.deb \
-    "https://github.com/sharkdp/bat/releases/download/v${BAT_VERSION}/bat_${BAT_VERSION}_amd64.deb" \
-    && echo "${BAT_SHA256}  bat.deb" | sha256sum -c -
+# Download CLI tools using centralized versions and multi-arch support
+RUN . /tmp/versions.conf && \
+    EZA_VERSION=${EZA_VERSION_OVERRIDE:-$EZA_VERSION} && \
+    case ${TARGETPLATFORM} in \
+        "linux/amd64") \
+            ARCH_SUFFIX="x86_64-unknown-linux-gnu"; \
+            EZA_SHA256="21459705857a08dacd48ee5b6ed2ef878e85096b645eb60938bac5238e3056e7"; \
+            ;; \
+        "linux/arm64") \
+            ARCH_SUFFIX="aarch64-unknown-linux-gnu"; \
+            EZA_SHA256="df458f76662b5aa1e87fcc0d4ff5eb1063905127acd41e2aee0e20fc187394da"; \
+            ;; \
+        *) echo "Unsupported architecture: ${TARGETPLATFORM}"; exit 1 ;; \
+    esac && \
+    curl -fsSL -o eza.tar.gz \
+    "https://github.com/eza-community/eza/releases/download/${EZA_VERSION}/eza_${ARCH_SUFFIX}.tar.gz" && \
+    echo "${EZA_SHA256}  eza.tar.gz" | sha256sum -c - && \
+    tar -xzf eza.tar.gz && \
+    mv eza ./eza-binary
 
-RUN curl -fsSL -o eza.tar.gz \
-    "https://github.com/eza-community/eza/releases/download/v${EZA_VERSION}/eza_x86_64-unknown-linux-gnu.tar.gz" \
-    && echo "${EZA_SHA256}  eza.tar.gz" | sha256sum -c - \
-    && tar -xzf eza.tar.gz \
-    && mv eza ./eza-binary
+RUN . /tmp/versions.conf && \
+    UV_VERSION=${UV_VERSION_OVERRIDE:-$UV_VERSION} && \
+    # Although uv has a version in its install url, the script itself does not have a checksum.
+    # We are trusting astral.sh here. A more secure alternative would be to build from source.
+    curl -fsSL -o uv-installer.sh \
+    "https://astral.sh/uv/install.sh"
 
-RUN curl -fsSL -o uv-installer.sh \
-    "https://astral.sh/uv/${UV_VERSION}/install.sh"
+# Download Java build tools using centralized versions
+RUN . /tmp/versions.conf && \
+    MAVEN_VERSION=${MAVEN_VERSION_OVERRIDE:-$MAVEN_VERSION} && \
+    MAVEN_SHA512="d6a2c88f0e57b8c381c706691c53b3e34b8982390f845d554a7375a0d2417539f1388b4334339e3f169f91a329d59218d655e81d115e10e470878328c68a48b5" && \
+    curl -fsSL -o maven.tar.gz \
+    "https://downloads.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" && \
+    echo "${MAVEN_SHA512}  maven.tar.gz" | sha512sum -c - && \
+    tar -xzf maven.tar.gz && \
+    mv apache-maven-${MAVEN_VERSION} maven
 
-# Download Java build tools
-RUN curl -fsSL -o maven.tar.gz \
-    "https://downloads.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" \
-    && echo "${MAVEN_SHA256}  maven.tar.gz" | sha256sum -c - \
-    && tar -xzf maven.tar.gz \
-    && mv apache-maven-${MAVEN_VERSION} maven
-
-RUN curl -fsSL -o gradle.zip \
-    "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
-    && echo "${GRADLE_SHA256}  gradle.zip" | sha256sum -c - \
-    && unzip -q gradle.zip \
-    && mv gradle-${GRADLE_VERSION} gradle
+RUN . /tmp/versions.conf && \
+    GRADLE_VERSION=${GRADLE_VERSION_OVERRIDE:-$GRADLE_VERSION} && \
+    GRADLE_SHA256="9d926787066a081739e8200858338b4a69e837c3a821a33aca9db09dd4a41026" && \
+    curl -fsSL -o gradle.zip \
+    "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" && \
+    echo "${GRADLE_SHA256}  gradle.zip" | sha256sum -c - && \
+    unzip -q gradle.zip && \
+    mv gradle-${GRADLE_VERSION} gradle
 
 # -----------------------------------------------------------------------------
 # Runtime stage - Final secure image
 # -----------------------------------------------------------------------------
-FROM debian:12-slim AS runtime
+FROM python:3.12-slim-bookworm AS runtime
 
-# Copy version args from builder
-ARG BAT_VERSION=0.24.0
-ARG EZA_VERSION=0.20.0
-ARG UV_VERSION=0.5.11
-ARG RUFF_VERSION=0.6.9
-ARG MYPY_VERSION=1.11.2
-ARG JAVA_VERSION=21
-ARG MAVEN_VERSION=3.9.6
-ARG GRADLE_VERSION=8.6
-ARG RUST_VERSION=1.75.0
+# Copy version configuration
+COPY config/versions.conf /tmp/versions.conf
 
-# Build metadata for OCI compliance
-ARG VCS_REF
-ARG BUILD_DATE
-LABEL org.opencontainers.image.title="wsl-setup-tool" \
-      org.opencontainers.image.description="Multi-language development container (Python, Java, Rust)" \
-      org.opencontainers.image.revision="$VCS_REF" \
-      org.opencontainers.image.created="$BUILD_DATE" \
-      org.opencontainers.image.source="https://github.com/martin/setup_tool"
+# ARG overrides for versions
+ARG PYTHON_VERSION_OVERRIDE
+ARG RUST_VERSION_OVERRIDE
 
 # Create non-root user first (security best practice)
 ARG USERNAME=vscode
 ARG USER_UID=1000
 ARG USER_GID=1000
 
-# Create user and group (fix ARG variable expansion)
-RUN groupadd --gid $USER_GID $USERNAME \
-    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
+# Create user and group and install sudo
+RUN apt-get update && apt-get install -y --no-install-recommends sudo && \
+    groupadd --gid $USER_GID $USERNAME && \
+    useradd --uid $USER_UID --gid $USER_GID -m $USERNAME -s /bin/bash && \
+    echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables early so PATH is available for installations
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -110,7 +108,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANGUAGE=en_US:en \
     LC_ALL=en_US.UTF-8 \
     PATH="/home/$USERNAME/.local/bin:/home/$USERNAME/.cargo/bin:/opt/maven/bin:/opt/gradle/bin:$PATH" \
-    JAVA_HOME=/usr/lib/jvm/java-${JAVA_VERSION}-openjdk-amd64 \
     MAVEN_HOME=/opt/maven \
     GRADLE_HOME=/opt/gradle \
     CARGO_HOME=/home/$USERNAME/.cargo \
@@ -118,24 +115,19 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # Install tini for proper init process
 RUN --mount=type=cache,target=/var/cache/apt \
-    --mount=type=cache,target=/var/lib/apt/lists \
-    apt-get update && apt-get install -y --no-install-recommends tini
+    apt-get update && apt-get install -y --no-install-recommends tini && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install system packages in a single optimized layer with cache mount
 RUN --mount=type=cache,target=/var/cache/apt \
-    --mount=type=cache,target=/var/lib/apt/lists \
     apt-get update && apt-get install -y --no-install-recommends \
     # Essential tools
     git \
     curl \
     ca-certificates \
     unzip \
-    # Python ecosystem
-    python3 \
-    python3-pip \
-    python3-venv \
     # Java ecosystem
-    openjdk-${JAVA_VERSION}-jdk-headless \
+    openjdk-21-jdk-headless \
     # Build tools for native extensions
     build-essential \
     pkg-config \
@@ -145,7 +137,7 @@ RUN --mount=type=cache,target=/var/cache/apt \
     bats \
     git-flow \
     pre-commit \
-    # Modern CLI tools  
+    # Modern CLI tools
     htop \
     tree \
     jq \
@@ -153,19 +145,17 @@ RUN --mount=type=cache,target=/var/cache/apt \
     fd-find \
     fzf \
     tmux \
+    zsh \
     # Locale support
     locales \
     && sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen \
-    && locale-gen
+    && locale-gen \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Create symbolic link for fd
 RUN ln -sf /usr/bin/fdfind /usr/local/bin/fd
 
 # Copy and install downloaded tools from builder stage
-COPY --from=builder /downloads/bat.deb /tmp/
-RUN dpkg -i /tmp/bat.deb && rm /tmp/bat.deb
-
-# Fix eza installation path
 COPY --from=builder /downloads/eza-binary /usr/local/bin/eza
 RUN chmod +x /usr/local/bin/eza
 
@@ -182,16 +172,20 @@ WORKDIR /home/$USERNAME
 COPY --from=builder /downloads/uv-installer.sh /tmp/
 RUN bash /tmp/uv-installer.sh && rm /tmp/uv-installer.sh
 
-# Use uv consistently for Python package management
-RUN uv pip install --system \
-    ruff==$RUFF_VERSION \
-    mypy==$MYPY_VERSION \
+# Use uv for Python package management with versions from config
+RUN . /tmp/versions.conf && \
+    PYTHON_VERSION=${PYTHON_VERSION_OVERRIDE:-$PYTHON_VERSION} && \
+    uv pip install --system \
+    ruff \
+    mypy \
     pytest \
     black \
     isort
 
-# Install Rust toolchain
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- \
+# Install Rust toolchain using version from config
+RUN . /tmp/versions.conf && \
+    RUST_VERSION=${RUST_VERSION_OVERRIDE:-$RUST_VERSION} && \
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- \
     --default-toolchain ${RUST_VERSION} \
     --profile default \
     --no-modify-path \
@@ -208,6 +202,18 @@ RUN ~/.cargo/bin/rustup component add \
     cargo-audit \
     sccache
 
+# Create version info script
+RUN echo '#!/bin/bash' > /home/$USERNAME/.local/bin/versions && \
+    echo '. /tmp/versions.conf' >> /home/$USERNAME/.local/bin/versions && \
+    echo 'echo "=== Development Environment Versions ==="' >> /home/$USERNAME/.local/bin/versions && \
+    echo 'echo "Python: $(python3 --version)"' >> /home/$USERNAME/.local/bin/versions && \
+    echo 'echo "Rust: $(rustc --version)"' >> /home/$USERNAME/.local/bin/versions && \
+    echo 'echo "Java: $(java --version | head -n1)"' >> /home/$USERNAME/.local/bin/versions && \
+    echo 'echo "Maven: $(mvn --version | head -n1)"' >> /home/$USERNAME/.local/bin/versions && \
+    echo 'echo "Gradle: $(gradle --version | grep Gradle)"' >> /home/$USERNAME/.local/bin/versions && \
+    echo 'echo "UV: $(uv --version)"' >> /home/$USERNAME/.local/bin/versions && \
+    chmod +x /home/$USERNAME/.local/bin/versions
+
 # Set working directory
 WORKDIR /workspace
 
@@ -216,7 +222,7 @@ ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # Add comprehensive health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python3 --version && java --version && rustc --version && mvn --version || exit 1
+    CMD python3 --version && java --version && rustc --version || exit 1
 
 # Reset DEBIAN_FRONTEND
 ENV DEBIAN_FRONTEND=dialog
@@ -225,4 +231,4 @@ ENV DEBIAN_FRONTEND=dialog
 EXPOSE 8000 3000 8080
 
 # Use exec form for proper signal handling
-CMD ["sleep", "infinity"] 
+CMD ["sleep", "infinity"]

@@ -32,6 +32,7 @@ This philosophy translates into the following practical aims for our content:
 * **Seek More:** Provide clear pathways to related information or deeper dives, without overwhelming the current document.
 * **Clarity & Brevity:** Structure content logically, use precise language, and avoid unnecessary jargon or verbosity.
 * **Motivation:** Engage the reader and make it clear why the information is valuable to them.
+* **DRY** Do not repeat the naming, never ever name a other markdownfile 'README.md`except the one in the root
 
 Adhering to these principles will ensure our documentation is effective and genuinely helpful.
 
@@ -100,18 +101,18 @@ plugins:
 
 ```markdown
 <!-- ✅ Good: Relative paths -->
-[Getting Started](guide/getting-started.md)
-[Section](sections/...)
+[Getting Started](mdc:guide/getting-started.md)
+[Section](mdc:sections/...)
 
 <!-- ❌ Bad: Absolute paths -->
-[Guide](http://example.com/guide)
+[Guide](mdc:http:/example.com/guide)
 ```
 
 ### Image Handling
 
 ```markdown
 <!-- ✅ Good: Relative path, descriptive alt text -->
-![Dashboard overview](img/dashboard-overview.png)
+![Dashboard overview](mdc:img/dashboard-overview.png)
 
 <!-- ❌ Bad: Absolute path, no alt text -->
 ![](http://example.com/image.png)

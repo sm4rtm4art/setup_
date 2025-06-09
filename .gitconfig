@@ -1,0 +1,16 @@
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[core]
+	excludesfile = /Users/martin/.gitignore_global
+[user]
+	name = Martin
+	email = your.email@example.com
+	signingkey = 2D5A1BA4EE184E2F
+[alias]
+	save = !pre-commit run && git commit
+
+[commit]
+    gpgSign = false
