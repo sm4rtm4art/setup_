@@ -1,7 +1,7 @@
-# 🛠️ WSL Setup Tool
+# 🛠️ Multi-Language Development Environment
 
-> **Professional WSL Debian 12 Development Environment Setup**  
-> Modern, modular architecture with multi-language support and containerized development.
+> **Professional Cross-Platform Development Container Setup**  
+> Modern, modular architecture with Python, Java, and Rust support in a single containerized environment.
 
 [![CI/CD Pipeline](https://img.shields.io/badge/CI%2FCD-GitLab-orange)](/.gitlab-ci.yml)
 [![Docker Support](https://img.shields.io/badge/Docker-Ready-blue)](/docker-compose.yml)
@@ -9,14 +9,14 @@
 
 ## 🚀 **Quick Start**
 
-### Option 1: Native Installation (WSL)
+### Option 1: Native Installation (Linux/WSL)
 
 ```bash
 # Clone the repository
-git clone <your-gitlab-repo>
-cd wsl-setup-tool
+git clone https://github.com/sm4rtm4art/setup_.git
+cd setup_
 
-# Run the modular setup script
+# Run the modular setup script (Linux/WSL only)
 ./setup-refactored.sh dev-minimal
 ```
 
@@ -36,20 +36,50 @@ docker compose exec devcontainer bash
 This project uses a **clean, modular architecture** that replaced a 1400+ line monolithic script:
 
 ```
-wsl-setup-tool/
-├── 🚀 setup-refactored.sh    # Main entry point (428 lines)
+multi-lang-dev-env/
+├── 🐳 .devcontainer/         # Multi-language development container (PRIMARY)
+├── 🛠️ Makefile              # Development workflow automation (PRIMARY)
 ├── 📚 lib/                   # Core libraries
 │   ├── core.sh              # Logging, error handling, utilities
 │   ├── installer.sh         # Installation patterns
-│   └── wsl.sh               # WSL-specific functionality
+│   └── wsl.sh               # Platform-specific functionality
 ├── 🔧 config/                # Configuration management
 │   └── versions.conf        # Centralized version control
 ├── 📦 modules/               # Feature modules
 │   └── languages/           # Language-specific installers
-├── 🐳 .devcontainer/         # Multi-language development container
-├── 🛠️ Makefile              # Development workflow automation
+├── 🚀 setup-refactored.sh    # Native installer (Linux/WSL only)
 └── 📖 docs/                  # Comprehensive documentation
 ```
+
+## 🎯 **Usage Approaches**
+
+### 🐳 **Container-First (Recommended)**
+
+- ✅ **Works everywhere**: Linux, macOS, Windows
+- ✅ **Consistent environment**: Same setup for all team members
+- ✅ **No system pollution**: Isolated from host system
+- ✅ **Ready to use**: `make dev` and you're coding
+
+### 🖥️ **Native Installation**
+
+- ✅ **Performance**: Direct access to system resources
+- ✅ **Integration**: Better with host system tools
+- ❌ **Linux/WSL only**: Requires compatible environment
+- ❌ **System changes**: Installs tools on host system
+
+**Use `setup-refactored.sh` when:**
+
+- You prefer native performance
+- You're on Linux/WSL exclusively
+- You want to understand the modular architecture
+- You need deep system integration
+
+**Use Docker container when:**
+
+- You want it to "just work" everywhere
+- You're collaborating with a team
+- You want isolated environments
+- You're on macOS or Windows
 
 ## 💻 **Language Support**
 
@@ -153,11 +183,11 @@ pre-commit run --all-files
 
 ### Common Issues
 
-**WSL Environment Detection**:
+**Platform Detection**:
 
 ```bash
-# Verify WSL
-grep -i microsoft /proc/version
+# Verify Linux/WSL (for native installation)
+grep -i microsoft /proc/version || echo "Linux environment"
 ```
 
 **Container Build Issues**:
@@ -192,4 +222,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Modern CLI Tools**: Built on excellent tools like `uv`, `ruff`, `eza`
 - **Container Best Practices**: Security-focused multi-stage builds
-- **WSL Community**: Extensive testing and feedback from WSL users
+- **Development Community**: Extensive testing and feedback from multi-platform users
