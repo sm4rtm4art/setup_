@@ -1,0 +1,167 @@
+# =============================================================================
+# GitLab CI/CD Configuration
+# Basic setup with language-specific pipelines
+# =============================================================================
+
+# Default settings for all jobs
+default:
+  image: ubuntu:22.04
+  before_script:
+    - apt-get update -qq
+    - apt-get install -y -qq curl wget git
+
+# Define stages
+stages:
+  - lint
+  - test
+  - build
+  - deploy
+
+# Define reusable templates
+.base_rules: &base_rules
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# =============================================================================
+# Shell Script Validation
+# =============================================================================
+shell-lint:
+  stage: lint
+  image: koalaman/shellcheck-alpine:stable
+  <<: *base_rules
+  script:
+    - shellcheck lib/*.sh modules/**/*.sh setup*.sh
+  allow_failure: false
+
+# =============================================================================
+# Python Pipeline
+# =============================================================================
+python-lint:
+  stage: lint
+  image: python:3.12-slim
+  <<: *base_rules
+  before_script:
+    - pip install ruff black mypy
+  script:
+    - black --check modules/languages/python
+    - ruff check modules/languages/python
+    - mypy modules/languages/python
+
+python-test:
+  stage: test
+  image: python:3.12-slim
+  <<: *base_rules
+  script:
+    - pip install pytest pytest-cov
+    - pytest tests/python --cov=modules/languages/python
+
+# =============================================================================
+# Java Pipeline
+# =============================================================================
+java-lint:
+  stage: lint
+  image: eclipse-temurin:21-jdk
+  <<: *base_rules
+  before_script:
+    - apt-get update && apt-get install -y checkstyle
+  script:
+    - checkstyle modules/languages/java/**/*.java
+
+java-test:
+  stage: test
+  image: eclipse-temurin:21-jdk
+  <<: *base_rules
+  script:
+    - ./gradlew test
+    # or: mvn test (depending on your build tool)
+
+# =============================================================================
+# Rust Pipeline
+# =============================================================================
+rust-lint:
+  stage: lint
+  image: rust:1.75
+  <<: *base_rules
+  script:
+    - rustup component add clippy
+    - cargo clippy -- -D warnings
+
+rust-test:
+  stage: test
+  image: rust:1.75
+  <<: *base_rules
+  script:
+    - cargo test
+
+# =============================================================================
+# Documentation & Config Validation
+# =============================================================================
+docs-lint:
+  stage: lint
+  image: node:20-slim
+  <<: *base_rules
+  before_script:
+    - npm install -g markdownlint-cli yamllint
+  script:
+    - markdownlint "**/*.md"
+    - yamllint .
+
+# =============================================================================
+# Integration Tests
+# =============================================================================
+integration-test:
+  stage: test
+  image: ubuntu:22.04
+  services:
+    - docker:dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+  before_script:
+    - apt-get update && apt-get install -y curl wget git docker.io
+  script:
+    - ./tests/integration/run_all.sh
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# =============================================================================
+# Build & Release
+# =============================================================================
+build-release:
+  stage: build
+  image: ubuntu:22.04
+  script:
+    - ./scripts/build_release.sh
+  artifacts:
+    paths:
+      - dist/
+  rules:
+    - if: $CI_COMMIT_TAG
+
+# =============================================================================
+# Pages (Documentation)
+# =============================================================================
+pages:
+  stage: deploy
+  image: node:20-slim
+  script:
+    - npm install -g docsify-cli
+    - mkdir public
+    - docsify init public
+    - cp docs/* public/
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# =============================================================================
+# Scheduled Jobs
+# =============================================================================
+version-check:
+  stage: test
+  image: python:3.12-slim
+  script:
+    - python scripts/check_versions.py
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" 

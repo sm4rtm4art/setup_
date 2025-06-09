@@ -1,0 +1,68 @@
+services:
+  devcontainer:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+      args:
+        # Pass build args for reproducible builds
+        BAT_VERSION: 0.24.0
+        EZA_VERSION: 0.20.0
+        UV_VERSION: 0.5.11
+        RUFF_VERSION: 0.6.9
+        MYPY_VERSION: 1.11.2
+        USERNAME: vscode
+        USER_UID: ${LOCAL_UID:-1000}
+        USER_GID: ${LOCAL_GID:-1000}
+    image: wsl-setup-tool-dev:latest
+    container_name: wsl-setup-dev
+
+    # Keep container running (matches Dockerfile CMD)
+    command: ["sleep", "infinity"]
+
+    # Expose ports explicitly instead of host networking
+    ports:
+      - "8000:8000" # Add ports as needed
+
+    # Mount the entire project and use named volumes for caches
+    volumes:
+      - .:/workspace:cached
+      # Use named volumes instead of host paths for portability
+      - uv-cache:/home/vscode/.cache/uv
+      - pip-cache:/home/vscode/.cache/pip
+      - pre-commit-cache:/home/vscode/.cache/pre-commit
+      - mypy-cache:/home/vscode/.cache/mypy
+
+    # Environment variables
+    environment:
+      - SHELL=/bin/zsh
+      - DEBIAN_FRONTEND=dialog
+      # Enable SSH agent forwarding instead of mounting keys
+      - SSH_AUTH_SOCK=${SSH_AUTH_SOCK}
+
+    # Working directory (matches Dockerfile)
+    working_dir: /workspace
+
+    # Run as non-root user with dynamic UID/GID
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+
+    # Enable init to properly handle signals
+    init: true
+
+    # Improved health check
+    healthcheck:
+      test: ["CMD-SHELL", "ruff --version && test -d /workspace"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+# Named volumes for cross-platform cache persistence
+volumes:
+  uv-cache:
+    driver: local
+  pip-cache:
+    driver: local
+  pre-commit-cache:
+    driver: local
+  mypy-cache:
+    driver: local

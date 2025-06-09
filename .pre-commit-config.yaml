@@ -1,0 +1,119 @@
+---
+# =============================================================================
+# Pre-commit Configuration
+# Comprehensive checks for multiple languages and file types
+# =============================================================================
+
+repos:
+  # =============================================================================
+  # Shell Script Checks
+  # =============================================================================
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.9.0
+    hooks:
+      - id: shellcheck
+        args: ["--severity=warning"]
+
+  # =============================================================================
+  # Python Checks
+  # =============================================================================
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        language_version: python3.12
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.11
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-all]
+
+  # =============================================================================
+  # Rust Checks
+  # =============================================================================
+  - repo: local
+    hooks:
+      - id: rust-clippy
+        name: Rust Clippy
+        entry: cargo clippy -- -D warnings
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+  # =============================================================================
+  # Java Checks
+  # =============================================================================
+  - repo: local
+    hooks:
+      - id: checkstyle
+        name: Java Checkstyle
+        entry: java -jar checkstyle.jar -c /google_checks.xml
+        language: system
+        types: [java]
+        pass_filenames: true
+
+  # =============================================================================
+  # General File Checks
+  # =============================================================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # =============================================================================
+  # Markdown Checks
+  # =============================================================================
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.38.0
+    hooks:
+      - id: markdownlint
+        args: ["--fix"]
+
+  # =============================================================================
+  # YAML Checks
+  # =============================================================================
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.33.0
+    hooks:
+      - id: yamllint
+        args: ["-d", "{extends: relaxed, rules: {line-length: {max: 120}}}"]
+
+  # =============================================================================
+  # Commit Message Checks
+  # =============================================================================
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.13.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+# =============================================================================
+# Configuration
+# =============================================================================
+default_language_version:
+  python: python3.12
+
+exclude: |
+  (?x)^(
+    dist/.*|
+    build/.*|
+    \.git/.*|
+    \.venv/.*|
+    node_modules/.*
+  )$ 

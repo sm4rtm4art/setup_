@@ -1,0 +1,287 @@
+---
+description: 
+globs: *.md,*.txt
+alwaysApply: false
+---
+---
+
+description: Comprehensive MkDocs development guidelines, emphasizing clarity, brevity, and reader empowerment. Rules for maintainable, performant, and secure documentation projects.
+globs:
+
+* "\*.md"
+* "mkdocs.yml"
+
+---
+
+# MkDocs Development Guidelines
+
+Comprehensive rules for maintainable, performant, and secure MkDocs documentation projects.
+
+**Applies to:** `*.md`, `mkdocs.yml`
+
+## Guiding Principles for Documentation Content
+
+Before diving into the technical specifics of MkDocs, every piece of documentation (`.md` file) created should be guided by this core belief:
+
+> **“Express only what is essential—no more, no less. Each document should empower the reader to understand, act, and seek out more if needed. Aim for clarity, brevity, and motivation.”**
+
+This philosophy translates into the following practical aims for our content:
+
+* **Understand:** Present information in a way that is clear, unambiguous, and easy to digest.
+* **Act:** Enable the reader to achieve their goals, whether it's understanding a concept, performing a task, or solving a problem.
+* **Seek More:** Provide clear pathways to related information or deeper dives, without overwhelming the current document.
+* **Clarity & Brevity:** Structure content logically, use precise language, and avoid unnecessary jargon or verbosity.
+* **Motivation:** Engage the reader and make it clear why the information is valuable to them.
+
+Adhering to these principles will ensure our documentation is effective and genuinely helpful.
+
+## Project Structure
+
+### Required Structure
+
+```plain
+mkdocs.yml          # Main config at project root
+docs/               # All documentation source files
+├── index.md        # Homepage (required)
+├── assets/         # Projelons)
+│   └── img/
+├── img/        Section-specific images
+└── sections/       # Logical content organization
+    └── img/   referencing docs
+```
+
+### File Naming
+
+* Use `.md` extension, lowercase with hyphens
+* Homepage: `index.md` or `README.md`
+* Descriptive names: `getting-started.md`, `api-reference.md`
+
+## Configuration Best Practices
+
+### Essential `mkdocs.yml` Structure
+
+```yaml
+site_name: "Project Name"
+site_description: "Clear, concise description"
+site_url: "https://yourdomain.com/docs"  # Production URL for sitemaps/feeds
+docs_dir: docs
+theme:
+  name: material  # Recommended theme
+
+nav:
+  - Home: index.md
+  - Guide:
+    - Gettinarted: guide/getting-started.md
+    - Advanced: guide/advanced.md
+
+markdown_extensions:
+  - toc
+  - admonition
+  - codehilite
+  - pymdownx.superfences    # Advanced code blocks
+  - pymdownx.details        # Collapsible sections
+  - pymdownx.tabbed        # Tabbed content
+  - pymdownx.smartsymbols  # Smart symbols
+
+plugins:
+  - search
+  - minify  # For production
+```
+
+### Navigation Management
+
+* Always define `nav` explicitly—don't rely on auto-generation
+* Use hierarchical structure with logical grouping
+* Keep navigation depth reasonable (max 3 levels)
+
+## Content Guidelines
+
+### Linking Best Practices
+
+```markdown
+<!-- ✅ Good: Relative paths -->
+[Getting Started](guide/getting-started.md)
+[Section](sections/...)
+
+<!-- ❌ Bad: Absolute paths -->
+[Guide](http://example.com/guide)
+```
+
+### Image Handling
+
+```markdown
+<!-- ✅ Good: Relative path, descriptive alt text -->
+![Dashboard overview](img/dashboard-overview.png)
+
+<!-- ❌ Bad: Absolute path, no alt text -->
+![](http://example.com/image.png)
+```
+
+### Content Reusability
+
+* Use `include-markdown` plugin for shared content snippets
+* Use `mkdocs-macros-plugin` for variables and template logic
+* Create snippet files in `docs/snippets/`
+* Reference common elements (disclaimers, procedures)
+
+## Performance & Security
+
+### Optimization Checklist
+
+* **Compress images** – convert to WebP where supported and keep PNG/JPG files ≤ 500 KB.
+* **HTML/CSS/JS minification** – enable `mkdocs-minify-plugin` with `minify_html: true`.
+* **Static asset compression** – serve the built site through a CDN (or `mkdocs-gzip-plugin`) with Brotli/Gzip enabled.
+* **Lazy‑load media** – add `loading="lazy"` to all `<img>` tags and avoid oversized GIFs.
+* **Trim JavaScript** – remove unused scripts and prefer inline SVGs over heavy icon fonts.
+* **Cache aggressively** – configure long‑lived cache headers for hashed assets; bust cache on deploy.
+* **Clean builds** – run `mkdocs build --clean` to remove orphaned/outdated files before deployment.
+* **Keep pages lean** – limit navigation depth to 3, split very large pages, and move hefty examples to appendices.
+
+### Security Measures
+
+* Never embed sensitive data in documentation
+* Sanitize any user-generated content
+* Use HTTPS for all external links and resources
+* Validate input in custom plugins
+
+## Common Anti-Patterns to Avoid
+
+### ❌ Configuration Mistakes
+
+```yaml
+# ❌ Omit site_url for production
+# site_url:
+
+# ❌ Wrong production URL
+site_url: "http://localhost:8000"
+
+# ✅ Correct
+site_url: "https://yourdomain.com/docs"
+
+# ❌ Ignore navigation structure
+# nav: auto
+```
+
+### ❌ Content Anti-Patterns
+
+* Very large single files (>1000 lines)—split into sections
+* Inconsistent heading hierarchy (h1 → h3 without h2)
+* Overusing emojis beyond status indicators
+* Broken internal links (test with `--strict` flag)
+
+## Testing & Quality Assurance
+
+### Build Validation
+
+```bash
+# Development with live reload
+mkdocs serve
+
+# Production build with strict checking
+mkdocs build --strict
+
+# Markdown linting
+markdownlint docs/
+# or with prettier
+prettier --check "docs/**/*.md"
+
+# Link validation
+mkdocs build && htmlproofer ./site
+```
+
+### CI/CD Pipeline Requirements
+
+```yaml
+# Essential pipeline steps
+steps:
+  - name: Lint Markdown
+    run: markdownlint docs/
+  - name: Build docs
+    run: mkdocs build --strict
+  - name: Validate links
+    run: htmlproofer ./site
+  - name: Deploy
+    run: mkdocs gh-deploy
+```
+
+## Plugin Recommendations
+
+### Essential Plugins
+
+```yaml
+plugins:
+  - search
+  - minify:
+      minify_html: true
+  - include-markdown
+```
+
+### Quality Plugins
+
+```yaml
+plugins:
+  - awesome-pages
+  - git-revision-date
+  - macros
+  - mermaid2
+  - mkdocs-glossary
+```
+
+## Emoji Usage Guidelines
+
+Use emojis **sparingly** and **consistently**:
+
+| Status   | Emoji | Usage                                |
+| -------- | ----- | ------------------------------------ |
+| Critical | 🔴    | Urgent issues, breaking changes      |
+| Warning  | 🟡    | Important notes, deprecated features |
+| Success  | 🟢    | Completed tasks, stable features     |
+| Info     | 🔵    | Tips, additional information         |
+
+Rules:
+
+1. Maximum one emoji per heading
+2. **Text must carry semantic meaning**—emoji is only visual enhancement
+3. Screen readers announce emoji but not custom meanings
+4. Never use emojis in code blocks or YAML
+5. Document emoji meanings in `CONTRIBUTING.md`
+
+## Deployment Best Practices
+
+### Hosting Recommendations
+
+1. **GitHub Pages** – Free, integrates with GitHub Actions
+2. **Netlify** – Excellent CI/CD, custom domains
+3. **Vercel** – Fast deployment, good for teams
+
+### Pre‑Deployment Checklist
+
+*
+
+## Debugging Common Issues
+
+### Build Failures
+
+```bash
+# Check detailed build output
+mkdocs build --verbose
+
+# Test individual components
+mkdocs serve --dev-addr 127.0.0.1:8001
+```
+
+### Link Issues
+
+* Use `mkdocs build --strict` to catch broken links
+* Check relative path accuracy
+* Verify anchor links match heading IDs
+
+### Plugin Conflicts
+
+* Test plugins individually
+* Check version compatibility
+* Review plugin documentation for conflicts
+
+---
+
+**Quick Reference:** `mkdocs serve` for development, `mkdocs build --strict` before deployment.

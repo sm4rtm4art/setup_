@@ -1,0 +1,76 @@
+{
+    "name": "WSL Setup Tool Dev Container",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": ".."
+    },
+    // Features to add to the dev container
+    "features": {
+        "ghcr.io/devcontainers/features/common-utils:2": {
+            "installZsh": true,
+            "configureZshAsDefaultShell": true,
+            "installOhMyZsh": true,
+            "upgradePackages": true,
+            "username": "vscode",
+            "userUid": "1000",
+            "userGid": "1000"
+        },
+        "ghcr.io/devcontainers/features/git:1": {},
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+        "ghcr.io/devcontainers/features/python:1": {
+            "version": "3.12",
+            "installTools": true
+        },
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "lts"
+        }
+    },
+    // Configure tool-specific properties
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-python.mypy-type-checker",
+                "charliermarsh.ruff",
+                "ms-azuretools.vscode-docker",
+                "timonwong.shellcheck",
+                "foxundermoon.shell-format",
+                "mads-hartmann.bash-ide-vscode"
+            ],
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "zsh",
+                "python.defaultInterpreterPath": "/usr/local/bin/python",
+                "python.linting.enabled": false,
+                "python.formatting.provider": "none",
+                "[python]": {
+                    "editor.defaultFormatter": "charliermarsh.ruff",
+                    "editor.formatOnSave": true,
+                    "editor.codeActionsOnSave": {
+                        "source.fixAll.ruff": "explicit",
+                        "source.organizeImports.ruff": "explicit"
+                    }
+                },
+                "ruff.enable": true,
+                "ruff.lint.enable": true,
+                "ruff.format.enable": true,
+                "mypy-type-checker.importStrategy": "fromEnvironment",
+                "python.analysis.typeCheckingMode": "basic"
+            }
+        }
+    },
+    // Ports to forward
+    "forwardPorts": [],
+    // Use 'postCreateCommand' to run commands after the container is created
+    "postCreateCommand": "bash .devcontainer/post-create.sh",
+    // Connect as the non-root user
+    "remoteUser": "vscode",
+    // Mount points
+    "mounts": [
+        "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
+    ],
+    // Environment variables
+    "remoteEnv": {
+        "SHELL": "/bin/zsh"
+    }
+}

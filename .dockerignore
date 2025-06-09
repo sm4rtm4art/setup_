@@ -1,0 +1,76 @@
+# Git and version control
+.git/
+.gitignore
+.gitattributes
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build artifacts
+dist/
+build/
+target/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Package managers
+node_modules/
+.npm
+.yarn/
+.pnpm-store/
+
+# Python
+.venv/
+venv/
+.env
+.pytest_cache/
+.coverage
+.mypy_cache/
+.ruff_cache/
+
+# Documentation
+docs/_build/
+*.md
+LICENSE
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Secrets and configuration
+*.key
+*.pem
+*.p12
+*.crt
+.env.local
+.env.production
+secrets/
+config/secrets/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp 
