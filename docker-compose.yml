@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   # Main development container with all languages
-  dev:
+  devcontainer:
     build:
       context: .
       dockerfile: .devcontainer/Dockerfile
